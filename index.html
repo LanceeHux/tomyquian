@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letters From Memories - Quian<3</title>
+    <title>Letters from Memories - Quian<#</title>
     <!-- Tailwind CSS v4 -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -12,21 +12,49 @@
         .serif-font { font-family: 'Playfair Display', serif; }
     </style>
 </head>
-<body class="bg-[#0b0a0d] text-[#e4e2e6] min-h-screen py-16 px-4 flex flex-col items-center">
+<body class="bg-[#0b0a0d] text-[#e4e2e6] min-h-screen py-16 px-4 flex flex-col items-center selection:bg-[#d4af37]/30 selection:text-[#d4af37]">
 
-    <div class="w-full max-w-xl space-y-12">
+    <div class="w-full max-w-6xl space-y-12">
         <!-- Hero intro for her -->
-        <div class="text-center space-y-3">
+        <div class="text-center space-y-3 max-w-xl mx-auto">
             <span class="text-xs uppercase tracking-[0.2em] text-[#d4af37] font-medium">Memories & Letters</span>
-            <h1 class="serif-font text-3xl font-medium text-[#f4efdc]">Letters from memories :></h1>
-            <p class="text-sm text-[#9a95a0] max-w-md mx-auto">hiii dear ko! ill save here all my letters for you and show it to you once I feel it is the right time.</p>
+            <h1 class="serif-font text-3xl md:text-4xl font-medium text-[#f4efdc]">Letters from memories :></h1>
+            <p class="text-sm text-[#9a95a0]">hiii dear ko! ill save here all my letters for you and show it to you once I feel it is the right time.</p>
         </div>
 
-        <!-- Dynamic Container for Entries -->
-        <div id="memoriesContainer" class="space-y-8">
+        <!-- Dynamic Container for Entries: Desktop Grid Layout -->
+        <div id="memoriesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Loading State -->
-            <div id="loadingState" class="text-center py-12 text-sm text-[#9a95a0]">
+            <div id="loadingState" class="col-span-full text-center py-12 text-sm text-[#9a95a0]">
                 Loading memories...
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Letter Modal Dialog -->
+    <div id="letterModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-[#141218] border border-[#d4af37]/30 rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl relative space-y-4">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-start border-b border-[#232029] pb-4">
+                <div>
+                    <span id="modalDate" class="text-xs text-[#d4af37] font-medium tracking-wide"></span>
+                    <h2 id="modalTitle" class="serif-font text-2xl text-[#f4efdc] font-medium mt-1"></h2>
+                </div>
+                <button id="closeModalBtn" class="text-[#9a95a0] hover:text-[#e4e2e6] text-xl font-bold p-1 rounded-lg hover:bg-[#232029] transition-all">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="overflow-y-auto pr-2 flex-1">
+                <p id="modalContent" class="text-sm md:text-base text-[#c4c0c8] whitespace-pre-line leading-relaxed"></p>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-4 border-t border-[#232029] flex justify-end">
+                <button id="closeModalBottomBtn" class="px-5 py-2 bg-[#232029] hover:bg-[#2e2a37] text-xs font-medium text-[#f4efdc] rounded-xl transition-all">
+                    Close
+                </button>
             </div>
         </div>
     </div>
@@ -36,7 +64,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // TODO: Replace with your actual Firebase project config credentials (same as index.html)
         const firebaseConfig = {
           apiKey: "AIzaSyCc6v2TfSNFbjbdud9FkT8uTIvfxK2Z3yk",
           authDomain: "lanceehux-tomyquian.firebaseapp.com",
@@ -49,41 +76,96 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Modal Elements
+        const modal = document.getElementById('letterModal');
+        const modalDate = document.getElementById('modalDate');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const closeModalBottomBtn = document.getElementById('closeModalBottomBtn');
+
+        function openModal(dateStr, title, content) {
+            modalDate.textContent = dateStr;
+            modalTitle.textContent = title;
+            modalContent.textContent = content;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+        closeModalBottomBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Get preview text (first ~120 characters or 2 sentences)
+        function getPreviewText(fullText) {
+            if (!fullText) return '';
+            const sentences = fullText.match(/[^.!?]+[.!?]+/g) || [fullText];
+            if (sentences.length >= 2) {
+                const preview = sentences.slice(0, 2).join(' ');
+                return preview.length > 150 ? fullText.substring(0, 140) + '...' : preview;
+            }
+            return fullText.length > 140 ? fullText.substring(0, 140) + '...' : fullText;
+        }
+
         async function loadMemories() {
             const container = document.getElementById('memoriesContainer');
             const loadingState = document.getElementById('loadingState');
 
             try {
-                // Fetch entries ordered by date or creation time
                 const q = query(collection(db, "memories"), orderBy("date", "desc"));
                 const querySnapshot = await getDocs(q);
 
                 loadingState.remove();
 
                 if (querySnapshot.empty) {
-                    container.innerHTML = `<div class="text-center py-12 text-sm text-[#9a95a0]">No memories added yet.</div>`;
+                    container.innerHTML = `<div class="col-span-full text-center py-12 text-sm text-[#9a95a0]">No memories added yet.</div>`;
                     return;
                 }
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     
-                    // Format the date nicely (e.g., October 16, 2026)
                     const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                     });
 
+                    const fullContent = data.content || '';
+                    const previewText = getPreviewText(fullContent);
+                    const isTruncated = fullContent.length > previewText.length;
+
                     const card = document.createElement('div');
-                    card.className = "bg-[#141218] border border-[#232029] rounded-2xl p-6 shadow-xl space-y-4";
+                    card.className = "bg-[#141218] border border-[#232029] rounded-2xl p-6 shadow-xl space-y-4 flex flex-col justify-between hover:border-[#d4af37]/30 transition-all";
+                    
                     card.innerHTML = `
-                        <div class="flex justify-between items-center text-xs text-[#d4af37] font-medium tracking-wide">
-                            <span>${formattedDate}</span>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-xs text-[#d4af37] font-medium tracking-wide">
+                                <span>${formattedDate}</span>
+                            </div>
+                            <h2 class="serif-font text-xl text-[#f4efdc] font-medium">${escapeHtml(data.title)}</h2>
+                            <p class="text-sm text-[#c4c0c8] whitespace-pre-line leading-relaxed">${escapeHtml(previewText)}</p>
                         </div>
-                        <h2 class="serif-font text-xl text-[#f4efdc] font-medium">${escapeHtml(data.title)}</h2>
-                        <p class="text-sm text-[#c4c0c8] whitespace-pre-line leading-relaxed">${escapeHtml(data.content)}</p>
+                        <div class="pt-2">
+                            <button class="read-more-btn w-full py-2 px-4 rounded-xl bg-[#1f1d24] hover:bg-[#2a2730] text-xs text-[#d4af37] border border-[#d4af37]/20 font-medium transition-all flex items-center justify-center gap-1">
+                                Read full letter <span>→</span>
+                            </button>
+                        </div>
                     `;
+
+                    // Add click handler to button
+                    const btn = card.querySelector('.read-more-btn');
+                    btn.addEventListener('click', () => {
+                        openModal(formattedDate, data.title, fullContent);
+                    });
+
                     container.appendChild(card);
                 });
             } catch (error) {
@@ -92,7 +174,6 @@
             }
         }
 
-        // Helper to prevent basic HTML injection
         function escapeHtml(text) {
             if (!text) return '';
             return text
