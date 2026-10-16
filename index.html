@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letters From Memories - Quian<3</title>
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .serif-font { font-family: 'Playfair Display', serif; }
+    </style>
+</head>
+<body class="bg-[#0b0a0d] text-[#e4e2e6] min-h-screen py-16 px-4 flex flex-col items-center">
+
+    <div class="w-full max-w-xl space-y-12">
+        <!-- Hero intro for her -->
+        <div class="text-center space-y-3">
+            <span class="text-xs uppercase tracking-[0.2em] text-[#d4af37] font-medium">Memories & Letters</span>
+            <h1 class="serif-font text-3xl font-medium text-[#f4efdc]">Letters from memories :></h1>
+            <p class="text-sm text-[#9a95a0] max-w-md mx-auto">hiii dear ko! ill save here all my letters for you and show it to you once I feel it is the right time.</p>
+        </div>
+
+        <!-- Dynamic Container for Entries -->
+        <div id="memoriesContainer" class="space-y-8">
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12 text-sm text-[#9a95a0]">
+                Loading memories...
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Modular Import -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // TODO: Replace with your actual Firebase project config credentials (same as index.html)
+        const firebaseConfig = {
+          apiKey: "AIzaSyCc6v2TfSNFbjbdud9FkT8uTIvfxK2Z3yk",
+          authDomain: "lanceehux-tomyquian.firebaseapp.com",
+          projectId: "lanceehux-tomyquian",
+          storageBucket: "lanceehux-tomyquian.firebasestorage.app",
+          messagingSenderId: "693028932839",
+          appId: "1:693028932839:web:29b7a804b7f55ac8642642"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function loadMemories() {
+            const container = document.getElementById('memoriesContainer');
+            const loadingState = document.getElementById('loadingState');
+
+            try {
+                // Fetch entries ordered by date or creation time
+                const q = query(collection(db, "memories"), orderBy("date", "desc"));
+                const querySnapshot = await getDocs(q);
+
+                loadingState.remove();
+
+                if (querySnapshot.empty) {
+                    container.innerHTML = `<div class="text-center py-12 text-sm text-[#9a95a0]">No memories added yet.</div>`;
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    // Format the date nicely (e.g., October 16, 2026)
+                    const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = "bg-[#141218] border border-[#232029] rounded-2xl p-6 shadow-xl space-y-4";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center text-xs text-[#d4af37] font-medium tracking-wide">
+                            <span>${formattedDate}</span>
+                        </div>
+                        <h2 class="serif-font text-xl text-[#f4efdc] font-medium">${escapeHtml(data.title)}</h2>
+                        <p class="text-sm text-[#c4c0c8] whitespace-pre-line leading-relaxed">${escapeHtml(data.content)}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("Error loading memories: ", error);
+                loadingState.textContent = "Failed to load memories. Please check your connection.";
+            }
+        }
+
+        // Helper to prevent basic HTML injection
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        loadMemories();
+    </script>
+</body>
+</html>
